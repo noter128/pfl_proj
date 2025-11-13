@@ -16,7 +16,10 @@ import Data.Char
 --
 data Expr = Num Integer
           | Add Expr Expr
+          | Sub Expr Expr
           | Mul Expr Expr
+          | Div Expr Expr
+          | Mod Expr Expr
           deriving Show
 
 -- a recursive evaluator for expressions
@@ -24,7 +27,10 @@ data Expr = Num Integer
 eval :: Expr -> Integer
 eval (Num n) = n
 eval (Add e1 e2) = eval e1 + eval e2
+eval (Sub e1 e2) = eval e1 - eval e2
 eval (Mul e1 e2) = eval e1 * eval e2
+eval (Div e1 e2) = eval e1 `div` eval e2
+eval (Mod e1 e2) = eval e1 `mod` eval e2
 
 -- | a parser for expressions
 -- Grammar rules:
@@ -42,9 +48,14 @@ expr = do t <- term
           exprCont t
 
 exprCont :: Expr -> Parser Expr
-exprCont acc = do char '+'
+exprCont acc = do 
+                  char '+'
                   t <- term
                   exprCont (Add acc t)
+               <|> (do 
+                      char '-'
+                      t <- term
+                      exprCont (Sub acc t))
                <|> return acc
               
 term :: Parser Expr
@@ -52,9 +63,18 @@ term = do f <- factor
           termCont f
 
 termCont :: Expr -> Parser Expr
-termCont acc =  do char '*'
+termCont acc =  do 
+                   char '*'
                    f <- factor  
                    termCont (Mul acc f)
+                 <|> (do
+                        char '/'
+                        f <- factor
+                        termCont (Div acc f))
+                 <|> (do
+                        char '%'
+                        f <- factor
+                        termCont (Mod acc f))
                  <|> return acc
 
 factor :: Parser Expr
